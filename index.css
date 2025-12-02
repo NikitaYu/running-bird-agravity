@@ -1,0 +1,4 @@
+body { margin: 0; overflow: hidden; background-color: #05000a; }
+/* Prevent touch actions on mobile controls to stop scrolling */
+.no-select { user-select: none; -webkit-user-select: none; touch-action: none; }
+.font-arcade { font-family: 'Press Start 2P', cursive; }
