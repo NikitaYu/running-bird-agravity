@@ -24,9 +24,9 @@ export interface GameRef {
 }
 
 // --- CONSTANTS ---
-const SPEED_BASE = 16;
-const JUMP_FORCE = 40;
-const GRAVITY = -155;
+const SPEED_BASE = 12; // Reduced by 25% (was 16)
+const JUMP_FORCE = 24; // Calculated for Height 4.5, Length 9.0 (3 tiles) at Speed 12
+const GRAVITY = -64;   // Calculated for Height 4.5, Length 9.0 (3 tiles) at Speed 12
 
 const LANE_WIDTH = 3.0;
 const SEGMENT_LENGTH = 12.0; // Multiple of LANE_WIDTH (3.0) for even grid spacing
@@ -653,12 +653,37 @@ const GameCanvas = forwardRef<GameRef, GameCanvasProps>(({ onUpdate, onEvent, ga
                 g.add(m);
 
                 if (addLines) {
-                    const edges = new THREE.EdgesGeometry(faceGeo);
-                    const line = new THREE.LineSegments(edges, lineMat);
+                    // FIX: Manually draw grid lines to ensure square tiles instead of stretched rectangles
+                    // EdgesGeometry draws the outline of the whole long strip (SEGMENT_LENGTH), which makes it look stretched.
+                    // We need horizontal lines every LANE_WIDTH to make them look like square tiles.
+
+                    const pts = [];
+                    const halfW = tileW / 2;
+                    const halfL = tileL / 2;
+
+                    // 1. Vertical lines (Sides of the strip)
+                    pts.push(new THREE.Vector3(-halfW, -halfL, 0), new THREE.Vector3(-halfW, halfL, 0));
+                    pts.push(new THREE.Vector3(halfW, -halfL, 0), new THREE.Vector3(halfW, halfL, 0));
+
+                    // 2. Horizontal lines (Rungs) - every LANE_WIDTH
+                    // Start from -halfL and go up to halfL
+                    // We use SEGMENT_LENGTH / LANE_WIDTH steps
+                    const steps = Math.round(SEGMENT_LENGTH / LANE_WIDTH);
+                    const stepSize = tileL / steps;
+
+                    for (let k = 0; k <= steps; k++) {
+                        const y = -halfL + k * stepSize;
+                        // Avoid double drawing at the very top if it overlaps with next segment (handled by polygonOffset usually, but good to be safe)
+                        if (k === steps) continue;
+                        pts.push(new THREE.Vector3(-halfW, y, 0), new THREE.Vector3(halfW, y, 0));
+                    }
+
+                    const lineGeo = new THREE.BufferGeometry().setFromPoints(pts);
+                    const line = new THREE.LineSegments(lineGeo, lineMat);
+
+                    // Match the mesh transformation
                     line.position.copy(m.position);
                     line.rotation.copy(m.rotation);
-                    // FIX: Remove scale to prevent gaps
-                    // line.scale.set(1.01, 1.01, 1.01);
                     g.add(line);
                 }
             }
@@ -1008,9 +1033,10 @@ const GameCanvas = forwardRef<GameRef, GameCanvasProps>(({ onUpdate, onEvent, ga
             // Camera Juice - NERFED for smooth play
 
             if (playerRef.current) {
-                // Dampened Y follow - minimal movement (0.02)
-                const targetY = baseCameraPos.current.y + (playerRef.current.position.y * 0.1);
-                cameraRef.current.position.y = THREE.MathUtils.lerp(cameraRef.current.position.y, targetY, 0.02);
+                // Subtle Camera Follow during Jump
+                // Moves higher slightly (30% of jump height) for parallax effect
+                const targetY = baseCameraPos.current.y + (playerRef.current.position.y * 0.3);
+                cameraRef.current.position.y = THREE.MathUtils.lerp(cameraRef.current.position.y, targetY, 0.05);
 
                 const targetX = playerRef.current.position.x * 0.5;
                 cameraRef.current.position.x = THREE.MathUtils.lerp(cameraRef.current.position.x, targetX, 0.05);
