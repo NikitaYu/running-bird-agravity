@@ -95,7 +95,10 @@ const App: React.FC = () => {
 
   const menuOptions = useMemo(() => {
     switch (gameState) {
-      case GameState.MENU: return [{ label: "START RUN", action: 'start' }];
+      case GameState.MENU: return [
+        { label: "PLAY", action: 'start' },
+        { label: "SETTINGS", action: 'settings' }
+      ];
       case GameState.PAUSED: return [{ label: "RESUME", action: 'resume' }, { label: "EXIT", action: 'exit' }];
       case GameState.GAME_OVER: return [{ label: "RETRY", action: 'start' }, { label: "MENU", action: 'exit' }];
       case GameState.LEVEL_COMPLETE: return [{ label: "NEXT LEVEL", action: 'next' }, { label: "MENU", action: 'exit' }];
@@ -123,6 +126,8 @@ const App: React.FC = () => {
   // Handle Input (Keyboard + Touch mapping)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      if (e.repeat) return; // Prevent rapid-fire on hold
+
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
         e.preventDefault();
       }
@@ -218,6 +223,9 @@ const App: React.FC = () => {
     } else if (action === 'next') {
       gameRef.current?.startNextLevel();
       setGameState(GameState.PLAYING);
+    } else if (action === 'settings') {
+      // Placeholder for settings
+      console.log("Settings clicked");
     }
   };
 
@@ -407,10 +415,21 @@ const App: React.FC = () => {
       {/* MENUS */}
       {gameState !== GameState.PLAYING && (
         <div className="absolute inset-0 bg-black/80 backdrop-blur flex items-center justify-center z-50">
-          <div className="flex flex-col gap-4 text-center">
-            <h1 className="text-4xl md:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-cyan-300 to-blue-600 font-bold mb-8 filter drop-shadow-[0_0_10px_cyan] px-4">
-              {gameState === GameState.MENU ? "RUNNING BIRD: Escape from Startup City" : gameState.replace('_', ' ')}
-            </h1>
+          <div className="flex flex-col gap-4 text-center items-center">
+            {gameState === GameState.MENU ? (
+              <h1 className="mb-8 px-4">
+                <div className="text-4xl md:text-6xl font-bold text-cyan-400 drop-shadow-[0_2px_0_rgba(0,0,0,1)] tracking-wider">
+                  RUNNING BIRD
+                </div>
+                <div className="text-xl md:text-2xl text-white/80 mt-2 font-normal tracking-wide">
+                  Escape from Startup City
+                </div>
+              </h1>
+            ) : (
+              <h1 className="text-4xl md:text-6xl text-white font-bold mb-8 drop-shadow-md px-4">
+                {gameState.replace('_', ' ')}
+              </h1>
+            )}
 
             {menuOptions.map((opt, i) => (
               <button
