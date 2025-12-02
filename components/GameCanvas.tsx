@@ -29,7 +29,7 @@ const JUMP_FORCE = 40;
 const GRAVITY = -155;
 
 const LANE_WIDTH = 3.0;
-const SEGMENT_LENGTH = 8.0;
+const SEGMENT_LENGTH = 12.0; // Multiple of LANE_WIDTH (3.0) for even grid spacing
 const MAX_HEALTH = 100;
 const PHASE_DURATION = 60;
 
@@ -323,7 +323,12 @@ const GameCanvas = forwardRef<GameRef, GameCanvasProps>(({ onUpdate, onEvent, ga
         scene.add(light);
         scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 
-        gridLinesMatRef.current = new THREE.LineBasicMaterial({ color: C_GRID_LINE });
+        gridLinesMatRef.current = new THREE.LineBasicMaterial({
+            color: C_GRID_LINE,
+            polygonOffset: true,
+            polygonOffsetFactor: -1,
+            polygonOffsetUnits: -1
+        });
 
         createPlayer(scene);
         createBackground(scene);
@@ -610,12 +615,13 @@ const GameCanvas = forwardRef<GameRef, GameCanvasProps>(({ onUpdate, onEvent, ga
             if (addLines) {
                 const totalWidth = LANE_COUNT_FLAT * LANE_WIDTH;
                 const pts = [];
-                const lineY = 0.1; // Raised grid lines
+                // FIX: Remove lineY offset, match plane Y
+                const lineY = -0.05;
                 for (let i = 0; i <= LANE_COUNT_FLAT; i++) {
                     const x = -totalWidth / 2 + i * LANE_WIDTH;
                     pts.push(new THREE.Vector3(x, 0, 0), new THREE.Vector3(x, 0, SEGMENT_LENGTH));
                 }
-                for (let z = 0; z <= SEGMENT_LENGTH; z += LANE_WIDTH) {
+                for (let z = 0; z < SEGMENT_LENGTH - 0.1; z += LANE_WIDTH) {
                     pts.push(new THREE.Vector3(-totalWidth / 2, lineY, z), new THREE.Vector3(totalWidth / 2, lineY, z));
                 }
                 g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), lineMat));
@@ -651,7 +657,8 @@ const GameCanvas = forwardRef<GameRef, GameCanvasProps>(({ onUpdate, onEvent, ga
                     const line = new THREE.LineSegments(edges, lineMat);
                     line.position.copy(m.position);
                     line.rotation.copy(m.rotation);
-                    line.scale.set(1.01, 1.01, 1.01);
+                    // FIX: Remove scale to prevent gaps
+                    // line.scale.set(1.01, 1.01, 1.01);
                     g.add(line);
                 }
             }
@@ -689,13 +696,14 @@ const GameCanvas = forwardRef<GameRef, GameCanvasProps>(({ onUpdate, onEvent, ga
                 if (addLines) {
                     const sidePts = [];
                     const step = width / 3;
-                    const lineOffset = 0.1; // Raised grid lines
+                    // FIX: Remove lineOffset to fix corner gaps
+                    const lineOffset = 0;
                     // Optimized loop: < 3 to avoid double drawing corners (j=3 is the start of next face)
                     for (let j = 0; j < 3; j++) {
                         const x = -width / 2 + j * step;
                         sidePts.push(new THREE.Vector3(x, -radius + lineOffset, 0), new THREE.Vector3(x, -radius + lineOffset, SEGMENT_LENGTH));
                     }
-                    for (let z = 0; z <= SEGMENT_LENGTH; z += LANE_WIDTH) {
+                    for (let z = 0; z < SEGMENT_LENGTH - 0.1; z += LANE_WIDTH) {
                         // Width adjusted for loop optimization
                         sidePts.push(new THREE.Vector3(-width / 2, -radius + lineOffset, z), new THREE.Vector3(width / 2, -radius + lineOffset, z));
                     }
